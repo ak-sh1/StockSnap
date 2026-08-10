@@ -2,6 +2,8 @@
 
 StockSnap is a stock-research web app that combines price performance, company comparisons, a device-local watchlist, and normalized SEC fundamentals in one focused dashboard.
 
+[View the live StockSnap demo](https://filingscope-finance.akash18.chatgpt.site)
+
 ![StockSnap social preview](public/og.png)
 
 ## Why this project stands out
