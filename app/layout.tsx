@@ -11,8 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const imageUrl = `${protocol}://${host}/og.png`;
-  const title = "FilingScope — Public company fundamentals";
-  const description = "Explore financial performance, key ratios, and recent SEC filings with transparent source data.";
+  const title = "StockSnap — Stock research at a glance";
+  const description = "Research stock performance, compare companies, build a private watchlist, and understand the financials behind the ticker.";
 
   return {
     title,
@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description,
       type: "website",
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: "FilingScope public company fundamentals dashboard" }],
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: "StockSnap stock research dashboard" }],
     },
     twitter: { card: "summary_large_image", title, description, images: [imageUrl] },
   };

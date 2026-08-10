@@ -1,13 +1,35 @@
 import { NextResponse } from "next/server";
-import { findCompany } from "../../lib/companies";
+import { findCompany, type Company } from "../../lib/companies";
 import { buildSnapshot } from "../../lib/finance";
 
 export const runtime = "edge";
 
 const SEC_HEADERS = {
   Accept: "application/json",
-  "User-Agent": "FilingScope educational project contact@filingscope.app",
+  "User-Agent": "StockSnap educational project contact@stocksnap.app",
 };
+
+type SecTickerEntry = { cik_str: number; ticker: string; title: string };
+
+async function resolveCompany(tickerValue: string | null): Promise<Company | undefined> {
+  const ticker = tickerValue?.trim().toUpperCase();
+  if (!ticker || !/^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) return undefined;
+  const curated = findCompany(ticker);
+  if (curated) return curated;
+
+  const response = await fetch("https://www.sec.gov/files/company_tickers.json", { headers: SEC_HEADERS });
+  if (!response.ok) return undefined;
+  const payload = (await response.json()) as Record<string, SecTickerEntry>;
+  const entry = Object.values(payload).find((item) => item.ticker.toUpperCase() === ticker);
+  if (!entry) return undefined;
+  return {
+    ticker: entry.ticker,
+    name: entry.title,
+    cik: String(entry.cik_str).padStart(10, "0"),
+    sector: "US public company",
+    exchange: "US market",
+  };
+}
 
 function validDate(value: string | null): string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -18,13 +40,13 @@ function validDate(value: string | null): string {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const company = findCompany(url.searchParams.get("ticker"));
+  const company = await resolveCompany(url.searchParams.get("ticker"));
   const asOf = validDate(url.searchParams.get("as_of"));
 
   if (!company) {
     return NextResponse.json(
-      { error: "Choose a company from the supported list." },
-      { status: 400 },
+      { error: "We could not match that ticker to a public US company." },
+      { status: 404 },
     );
   }
 

@@ -1,1 +1,1 @@
-"""FilingScope API package."""
+"""StockSnap API package."""

@@ -1,56 +1,60 @@
-# FilingScope
+# StockSnap
 
-FilingScope turns raw SEC filings into a focused public-company fundamentals dashboard. It shows five-year financial trends, core ratios, recent filings, and Treasury-rate context without pretending to be a trading terminal.
+StockSnap is a stock-research web app that combines price performance, company comparisons, a device-local watchlist, and normalized SEC fundamentals in one focused dashboard.
 
-![FilingScope dashboard](public/og.png)
+![StockSnap social preview](public/og.png)
 
-## Why this project exists
+## Why this project stands out
 
-Financial datasets are deceptively difficult: filings arrive after reporting periods, companies revise prior values, identifiers change, and the same fact can appear more than once. FilingScope keeps the source filing and availability date attached to every value so historical queries do not accidentally use future information.
+Stock apps often depend on one opaque data feed. StockSnap separates the pipeline into two traceable layers: daily market data from Alpha Vantage and reported business fundamentals from SEC EDGAR. It also handles provider limits, caching, missing financial concepts, point-in-time filtering, and a clearly labeled no-key demo mode.
 
-## What users can do
+## Important features
 
-- Search 12 widely followed US public companies
-- Compare five years of revenue, net income, and free cash flow
-- Review profitability, liquidity, and leverage ratios
-- Open recent 10-K, 10-Q, and 8-K filings at the SEC
-- View current 10-Year Treasury rate context
-- Query data as it was available on a historical date through the API
+- Search the SEC directory instead of relying on a small hardcoded ticker list
+- Explore interactive 1-month, 3-month, and 1-year price performance
+- Compare two stocks on a normalized-return chart
+- Save a private watchlist in the browser without creating an account
+- Review market cap, P/E, EPS, beta, volume, and 52-week range
+- Connect price movement to five years of revenue, net income, and cash flow
+- Query point-in-time SEC fundamentals through the Python API
+- Fall back gracefully when an upstream market provider is unavailable
 
 ## Architecture
 
 ```text
-SEC EDGAR ─────────┐
-                   ├── Python FastAPI ── normalized JSON API
-FRED ──────────────┘          │
-                              ▼
-                       FilingScope web UI
-                              ▲
-                              │
-                 built-in edge API fallback
+Alpha Vantage ─────┐
+                   ├── FastAPI data service ── normalized stock snapshot
+SEC EDGAR ─────────┤             │
+                   │             ▼
+FRED ──────────────┘      React / vinext UI
+                                │
+                                └── local browser watchlist
 ```
 
-The Python service is the primary portfolio backend. The frontend includes equivalent read-only edge routes so a public demo remains usable when it is deployed independently.
+The Python FastAPI service is the portfolio backend. Equivalent read-only edge routes are included so the hosted frontend can run independently and show a transparent demo dataset when no market-data key is configured.
 
-## Technology
+## Stack
 
-- Python, FastAPI, HTTPX, pytest
-- TypeScript, React, vinext
-- SEC EDGAR Company Facts and Submissions APIs
+- Python 3.12, FastAPI, HTTPX, pytest
+- TypeScript, React 19, vinext
+- HTML Canvas charting with no chart-library dependency
+- SEC EDGAR Company Facts and ticker-directory APIs
+- Alpha Vantage daily market data
 - Federal Reserve Economic Data (FRED)
-- Docker and GitHub Actions
+- Docker, Docker Compose, and GitHub Actions
 
 ## Run locally
 
 ### Docker
 
-Copy `.env.example` to `.env`, replace the SEC user-agent value with your name and email, then run:
+Copy the environment template and add your credentials:
 
 ```bash
+cp .env.example .env
 docker compose up --build
 ```
 
-Open `http://localhost:3000`. Interactive API documentation is available at `http://localhost:8000/docs`.
+Open `http://localhost:3000`. FastAPI documentation is available at `http://localhost:8000/docs`.
 
 ### Without Docker
 
@@ -70,41 +74,52 @@ npm install
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
+If `NEXT_PUBLIC_API_BASE_URL` is omitted, the frontend uses its built-in edge API and demo market snapshot.
+
+## Environment variables
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `SEC_USER_AGENT` | Yes for production | Identifies your SEC API client with a name and email |
+| `ALPHA_VANTAGE_API_KEY` | For live prices | Enables daily price history and market statistics |
+| `ALLOWED_ORIGINS` | Backend deployments | Comma-separated frontend origins allowed by CORS |
+| `NEXT_PUBLIC_API_BASE_URL` | Optional | Points the frontend at the Python API |
+
+Alpha Vantage’s free plan is rate-limited. StockSnap caches successful upstream responses for six hours to use that allowance responsibly.
+
 ## API
 
 ```http
+GET /api/health
 GET /api/companies
+GET /api/search?q=apple
+GET /api/stock?ticker=AAPL
 GET /api/company?ticker=AAPL
 GET /api/company?ticker=AAPL&as_of=2024-06-30
 GET /api/macro
-GET /api/health
 ```
 
-The `as_of` parameter excludes facts and filings published after that date. This is the foundation for point-in-time-correct financial analysis.
+The `as_of` parameter excludes SEC facts published after the selected date. This prevents historical analysis from accidentally seeing future information.
 
 ## Verification
 
 ```bash
 pytest
 npm test
+npm run lint
 ```
 
-The test suite checks point-in-time filtering, financial normalization, and server-rendered product content. GitHub Actions runs both Python and frontend checks on every pull request.
+GitHub Actions runs the Python and frontend suites on every push and pull request.
 
 ## Deployment
 
-Both applications are containerized. Deploy the root `Dockerfile` as the API and set:
+Both services are containerized. Deploy the root `Dockerfile` for the API and `Dockerfile.web` for the frontend, or deploy the frontend independently with its built-in routes.
 
-```text
-SEC_USER_AGENT="Your Name your.email@example.com"
-ALLOWED_ORIGINS="https://your-frontend.example.com"
-```
-
-Deploy the frontend with `Dockerfile.web` and provide the API URL as the build argument `NEXT_PUBLIC_API_BASE_URL`. The frontend can also be deployed by itself; it will use its built-in edge endpoints.
+For live prices, add `ALPHA_VANTAGE_API_KEY` to the API or frontend hosting environment. Never expose the key through a `NEXT_PUBLIC_` variable.
 
 ## Data policy
 
-FilingScope uses public SEC and Federal Reserve data and caches upstream responses for six hours. The SEC asks automated clients to identify themselves and stay below its published request limit. Do not remove the user-agent configuration or use this repository to redistribute data from a provider whose license forbids it.
+StockSnap uses public SEC and Federal Reserve data. Live market data is requested through the documented Alpha Vantage API. The bundled market snapshot is explicitly marked as demonstration data and should not be treated as current pricing.
 
 This project is educational and does not provide investment advice.
 

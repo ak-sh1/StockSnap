@@ -7,6 +7,7 @@ export const sampleSnapshot: CompanySnapshot = {
     legalName: "Apple Inc.",
     cik: "0000320193",
     sector: "Technology",
+    exchange: "NASDAQ",
   },
   asOf: "2024-11-01",
   metrics: {

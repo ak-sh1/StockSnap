@@ -12,16 +12,16 @@ async function render() {
   );
 }
 
-test("server-renders the FilingScope product", async () => {
+test("server-renders the StockSnap product", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>FilingScope — Public company fundamentals<\/title>/i);
-  assert.match(html, /Understand the business/);
-  assert.match(html, /Annual revenue/);
-  assert.match(html, /Recent filings/);
-  assert.match(html, /Point-in-time aware/);
-  assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
+  assert.match(html, /<title>StockSnap — Stock research at a glance<\/title>/i);
+  assert.match(html, /Know the stock/);
+  assert.match(html, /Price performance/);
+  assert.match(html, /Your watchlist/);
+  assert.match(html, /Business fundamentals/);
+  assert.doesNotMatch(html, /Recent filings|FilingScope|codex-preview|react-loading-skeleton/i);
 });

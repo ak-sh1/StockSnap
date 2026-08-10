@@ -19,7 +19,7 @@ class PublicDataClient:
             "Accept": "application/json",
             "User-Agent": os.getenv(
                 "SEC_USER_AGENT",
-                "FilingScope educational project contact@filingscope.app",
+                "StockSnap educational project contact@stocksnap.app",
             ),
         }
 
@@ -40,6 +40,32 @@ class PublicDataClient:
             return cached[1]
         response = await self._get(url, headers=self._sec_headers)
         payload = response.json()
+        self._cache[url] = (time.monotonic(), payload)
+        return payload
+
+    async def sec_tickers(self) -> dict[str, Any]:
+        url = "https://www.sec.gov/files/company_tickers.json"
+        cached = self._cache.get(url)
+        if cached and time.monotonic() - cached[0] < self.ttl_seconds:
+            return cached[1]
+        response = await self._get(url, headers=self._sec_headers)
+        payload = response.json()
+        self._cache[url] = (time.monotonic(), payload)
+        return payload
+
+    async def alpha_json(self, function_name: str, symbol: str, api_key: str) -> dict[str, Any]:
+        url = f"https://www.alphavantage.co/query?function={function_name}&symbol={symbol}&apikey={api_key}"
+        cached = self._cache.get(url)
+        if cached and time.monotonic() - cached[0] < self.ttl_seconds:
+            return cached[1]
+        response = await self._get(url, headers={"Accept": "application/json"})
+        payload = response.json()
+        if payload.get("Note") or payload.get("Information"):
+            raise httpx.HTTPStatusError(
+                payload.get("Note") or payload.get("Information"),
+                request=response.request,
+                response=response,
+            )
         self._cache[url] = (time.monotonic(), payload)
         return payload
 

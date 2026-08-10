@@ -1,20 +1,22 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime, timedelta, timezone
 from os import getenv
+from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from .companies import COMPANIES, find_company
+from .companies import COMPANIES, Company, find_company
 from .normalize import build_snapshot
 from .sec_client import PublicDataClient
 
 
 app = FastAPI(
-    title="FilingScope API",
-    description="Normalized public-company fundamentals sourced from SEC EDGAR.",
+    title="StockSnap API",
+    description="Stock price history and normalized SEC fundamentals for public US companies.",
     version="1.0.0",
 )
 allowed_origins = [origin.strip() for origin in getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")]
@@ -28,6 +30,35 @@ app.add_middleware(
 client = PublicDataClient()
 
 
+def dynamic_company(entry: dict[str, Any]) -> Company:
+    return {
+        "ticker": str(entry["ticker"]).upper(),
+        "name": str(entry["title"]),
+        "cik": str(entry["cik_str"]).zfill(10),
+        "sector": "US public company",
+        "exchange": "US market",
+    }
+
+
+async def resolve_company(ticker: str) -> Company | None:
+    curated = find_company(ticker)
+    if curated:
+        return curated
+    directory = await client.sec_tickers()
+    normalized = ticker.upper()
+    entry = next((item for item in directory.values() if str(item["ticker"]).upper() == normalized), None)
+    return dynamic_company(entry) if entry else None
+
+
+def optional_number(value: Any) -> float | None:
+    if value in (None, "", "None", "-"):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 @app.get("/api/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "time": datetime.now(timezone.utc).isoformat()}
@@ -38,14 +69,32 @@ async def list_companies() -> dict[str, object]:
     return {"items": COMPANIES, "count": len(COMPANIES)}
 
 
+@app.get("/api/search")
+async def search_companies(q: str = Query(min_length=1, max_length=80)) -> dict[str, object]:
+    normalized = q.strip().lower()
+    try:
+        directory = await client.sec_tickers()
+    except httpx.HTTPError as error:
+        raise HTTPException(status_code=502, detail="The SEC company directory is temporarily unavailable.") from error
+    items = [
+        dynamic_company(entry)
+        for entry in directory.values()
+        if str(entry["ticker"]).lower().startswith(normalized) or normalized in str(entry["title"]).lower()
+    ][:8]
+    return {"items": items}
+
+
 @app.get("/api/company")
 async def company_snapshot(
-    ticker: str = Query(min_length=1, max_length=8),
+    ticker: str = Query(min_length=1, max_length=10),
     as_of: date = Query(default_factory=date.today),
 ) -> dict[str, object]:
-    company = find_company(ticker)
+    try:
+        company = await resolve_company(ticker)
+    except httpx.HTTPError as error:
+        raise HTTPException(status_code=502, detail="The SEC company directory is temporarily unavailable.") from error
     if not company:
-        raise HTTPException(status_code=404, detail="Ticker is not in the supported company list.")
+        raise HTTPException(status_code=404, detail="Ticker was not found in the SEC company directory.")
 
     try:
         company_facts = await client.sec_json(f"api/xbrl/companyfacts/CIK{company['cik']}.json")
@@ -53,6 +102,57 @@ async def company_snapshot(
         return build_snapshot(company, company_facts, submissions, as_of.isoformat())
     except httpx.HTTPError as error:
         raise HTTPException(status_code=502, detail="SEC EDGAR is temporarily unavailable.") from error
+
+
+@app.get("/api/stock")
+async def stock_snapshot(ticker: str = Query(pattern=r"^[A-Za-z][A-Za-z0-9.\-]{0,9}$")) -> dict[str, object]:
+    api_key = getenv("ALPHA_VANTAGE_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Set ALPHA_VANTAGE_API_KEY to enable market prices.")
+
+    symbol = ticker.upper()
+    try:
+        daily, overview = await asyncio.gather(
+            client.alpha_json("TIME_SERIES_DAILY", symbol, api_key),
+            client.alpha_json("OVERVIEW", symbol, api_key),
+        )
+    except httpx.HTTPError as error:
+        raise HTTPException(status_code=502, detail="The market data provider is temporarily unavailable.") from error
+
+    series = daily.get("Time Series (Daily)", {})
+    history = sorted(
+        (
+            {"date": observation_date, "close": float(values["4. close"])}
+            for observation_date, values in series.items()
+        ),
+        key=lambda item: item["date"],
+    )
+    if len(history) < 2:
+        raise HTTPException(status_code=502, detail="The market data provider returned no daily prices.")
+    latest, previous = history[-1], history[-2]
+    change = latest["close"] - previous["close"]
+    latest_volume = series[latest["date"]].get("5. volume")
+    return {
+        "ticker": symbol,
+        "price": latest["close"],
+        "previousClose": previous["close"],
+        "change": change,
+        "changePercent": change / previous["close"] * 100,
+        "asOf": latest["date"],
+        "currency": overview.get("Currency", "USD"),
+        "volume": optional_number(latest_volume),
+        "averageVolume": None,
+        "marketCap": optional_number(overview.get("MarketCapitalization")),
+        "peRatio": optional_number(overview.get("PERatio")),
+        "eps": optional_number(overview.get("EPS")),
+        "dividendYield": optional_number(overview.get("DividendYield")),
+        "beta": optional_number(overview.get("Beta")),
+        "high52Week": optional_number(overview.get("52WeekHigh")),
+        "low52Week": optional_number(overview.get("52WeekLow")),
+        "history": history,
+        "mode": "live",
+        "source": "Alpha Vantage daily market data",
+    }
 
 
 @app.get("/api/macro")

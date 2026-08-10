@@ -4,8 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      SEC_USER_AGENT: ${SEC_USER_AGENT:-FilingScope local development contact@example.com}
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-StockSnap local development contact@example.com}
       ALLOWED_ORIGINS: http://localhost:3000
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
     ports:
       - "8000:8000"
 
