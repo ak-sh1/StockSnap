@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDemoMarketSnapshot, type MarketSnapshot, type PricePoint } from "../../lib/market";
 
-export const runtime = "edge";
-
 type AlphaDailyResponse = {
   "Meta Data"?: Record<string, string>;
   "Time Series (Daily)"?: Record<string, { "4. close": string; "5. volume": string }>;

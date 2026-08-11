@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "edge";
-
 type Observation = { date: string; value: number };
 
 function parseCsv(text: string): Observation[] {

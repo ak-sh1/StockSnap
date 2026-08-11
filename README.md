@@ -2,9 +2,9 @@
 
 StockSnap is a stock-research web app that combines price performance, company comparisons, a device-local watchlist, and normalized SEC fundamentals in one focused dashboard.
 
-[View the live StockSnap demo](https://filingscope-finance.akash18.chatgpt.site)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fak-sh1%2FStockSnap)
 
-![StockSnap social preview](public/og.png)
+![StockSnap social preview](public/og.jpg)
 
 ## Why this project stands out
 
@@ -25,20 +25,18 @@ Stock apps often depend on one opaque data feed. StockSnap separates the pipelin
 
 ```text
 Alpha Vantage ─────┐
-                   ├── FastAPI data service ── normalized stock snapshot
-SEC EDGAR ─────────┤             │
-                   │             ▼
-FRED ──────────────┘      React / vinext UI
-                                │
-                                └── local browser watchlist
+SEC EDGAR ─────────┼── Next.js API routes ── StockSnap dashboard
+FRED ──────────────┘            │                        │
+                                │                        └── local browser watchlist
+                                └── optional FastAPI service when using Docker
 ```
 
-The Python FastAPI service is the portfolio backend. Equivalent read-only edge routes are included so the hosted frontend can run independently and show a transparent demo dataset when no market-data key is configured.
+The public Vercel deployment uses the built-in Next.js API routes, so the website is one deployable application. The Python FastAPI service remains as a portfolio-quality data-pipeline implementation and is used by the Docker Compose setup. Both paths show a transparent demo dataset when no market-data key is configured.
 
 ## Stack
 
 - Python 3.12, FastAPI, HTTPX, pytest
-- TypeScript, React 19, vinext
+- TypeScript, React 19, Next.js 16
 - HTML Canvas charting with no chart-library dependency
 - SEC EDGAR Company Facts and ticker-directory APIs
 - Alpha Vantage daily market data
@@ -76,7 +74,7 @@ npm install
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
-If `NEXT_PUBLIC_API_BASE_URL` is omitted, the frontend uses its built-in edge API and demo market snapshot.
+If `NEXT_PUBLIC_API_BASE_URL` is omitted, the frontend uses its built-in Next.js API and demo market snapshot.
 
 ## Environment variables
 
@@ -115,9 +113,21 @@ GitHub Actions runs the Python and frontend suites on every push and pull reques
 
 ## Deployment
 
-Both services are containerized. Deploy the root `Dockerfile` for the API and `Dockerfile.web` for the frontend, or deploy the frontend independently with its built-in routes.
+### Vercel (recommended)
 
-For live prices, add `ALPHA_VANTAGE_API_KEY` to the API or frontend hosting environment. Never expose the key through a `NEXT_PUBLIC_` variable.
+Import this GitHub repository into Vercel or use the **Deploy with Vercel** button above. Vercel detects Next.js, builds the app, and deploys the frontend together with its built-in API routes. Connect the repository once and every push to `main` can produce a new production deployment; pull requests receive preview deployments.
+
+For live prices, add `ALPHA_VANTAGE_API_KEY` as a Vercel environment variable. Never expose the key through a `NEXT_PUBLIC_` variable. The app works without it using clearly labeled demonstration market data.
+
+### Docker (optional)
+
+Docker is not required for the Vercel deployment. It is included for running the full two-service stack anywhere containers are supported:
+
+- `Dockerfile` packages the Python FastAPI data service.
+- `Dockerfile.web` packages the production Next.js server.
+- `compose.yaml` builds both images, connects the frontend to the API, and exposes ports `3000` and `8000`.
+
+Docker keeps the operating system, language runtimes, and dependencies consistent across laptops, CI, and container hosts. That prevents “works on my machine” setup differences and makes the full stack start with one command.
 
 ## Data policy
 

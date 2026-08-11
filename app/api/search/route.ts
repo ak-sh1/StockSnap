@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { companies, type Company } from "../../lib/companies";
 
-export const runtime = "edge";
-
 const SEC_HEADERS = {
   Accept: "application/json",
   "User-Agent": "StockSnap educational project contact@stocksnap.app",
