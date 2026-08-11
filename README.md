@@ -2,6 +2,8 @@
 
 StockSnap is a stock-research web app that combines price performance, company comparisons, a device-local watchlist, and normalized SEC fundamentals in one focused dashboard.
 
+[View the live StockSnap app](https://stocksnap-phi.vercel.app)
+
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fak-sh1%2FStockSnap)
 
 ![StockSnap social preview](public/og.jpg)
