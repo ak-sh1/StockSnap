@@ -475,7 +475,7 @@ export function Dashboard() {
         </div>
 
         {notice && <div className="notice" role="status">{notice}</div>}
-        {market?.mode === "demo" && <div className="demo-notice"><strong>Demo market data</strong><span>This public deployment uses a dated sample. Add <code>ALPHA_VANTAGE_API_KEY</code> to the deployed environment for live daily data.</span></div>}
+        {market?.mode === "demo" && <div className="demo-notice"><strong>Demo market data</strong><span>This public deployment uses a dated sample. Add <code>TWELVE_DATA_API_KEY</code> to the deployed environment for broad daily-price coverage.</span></div>}
 
         <div className="research-grid">
           <article className="panel chart-panel">
@@ -531,7 +531,7 @@ export function Dashboard() {
       <section className="methodology" id="methodology">
         <div><span className="section-label">Transparent by design</span><h2>Useful data.<br />Clear limits.</h2></div>
         <div className="method-grid">
-          <article><span>01</span><h3>Market movement</h3><p>Live deployments can use Alpha Vantage daily prices. Without a key, StockSnap clearly labels its curated demo series.</p></article>
+          <article><span>01</span><h3>Market movement</h3><p>Daily prices use Twelve Data first, with Alpha Vantage as a fallback. Without a key, StockSnap clearly labels its curated demo series.</p></article>
           <article><span>02</span><h3>SEC fundamentals</h3><p>Revenue, earnings, cash flow, and balance-sheet values come directly from SEC EDGAR company facts.</p></article>
           <article><span>03</span><h3>Private watchlist</h3><p>Your saved tickers stay in this browser. No account, tracking profile, or database is required.</p></article>
         </div>

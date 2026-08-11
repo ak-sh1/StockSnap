@@ -6,6 +6,7 @@ services:
     environment:
       SEC_USER_AGENT: ${SEC_USER_AGENT:-StockSnap local development contact@example.com}
       ALLOWED_ORIGINS: http://localhost:3000
+      TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
     ports:
       - "8000:8000"

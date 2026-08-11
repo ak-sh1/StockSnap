@@ -69,6 +69,25 @@ class PublicDataClient:
         self._cache[url] = (time.monotonic(), payload)
         return payload
 
+    async def twelve_json(self, symbol: str, api_key: str) -> dict[str, Any]:
+        url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1day&outputsize=260&order=asc"
+        cached = self._cache.get(url)
+        if cached and time.monotonic() - cached[0] < self.ttl_seconds:
+            return cached[1]
+        response = await self._get(
+            url,
+            headers={"Accept": "application/json", "Authorization": f"apikey {api_key}"},
+        )
+        payload = response.json()
+        if payload.get("status") == "error" or payload.get("code"):
+            raise httpx.HTTPStatusError(
+                payload.get("message", "Twelve Data returned an error"),
+                request=response.request,
+                response=response,
+            )
+        self._cache[url] = (time.monotonic(), payload)
+        return payload
+
     async def fred_series(self, series_id: str) -> list[dict[str, Any]]:
         url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}&cosd=2024-01-01"
         cached = self._cache.get(url)
