@@ -403,11 +403,6 @@ export function Dashboard() {
           <span className="brand-mark" aria-hidden="true">S</span>
           <span>StockSnap</span>
         </a>
-        <nav aria-label="Primary navigation">
-          <a href="#dashboard">Research</a>
-          <a href="#watchlist">Watchlist</a>
-          <a href="#methodology">Data sources</a>
-        </nav>
       </header>
 
       <section className="hero" id="top">
@@ -537,7 +532,7 @@ export function Dashboard() {
         </div>
       </section>
 
-      <footer><a className="brand footer-brand" href="#top"><span className="brand-mark">S</span><span>StockSnap</span></a><p>Stock research at a glance. Not investment advice.</p><a href="https://www.sec.gov/edgar/sec-api-documentation" target="_blank" rel="noreferrer">Data documentation ↗</a></footer>
+      <footer><a className="brand footer-brand" href="#top"><span className="brand-mark">S</span><span>StockSnap</span></a><p>Stock research at a glance. Not investment advice.</p><p className="builder-credit">Built by <a href="https://github.com/ak-sh1" target="_blank" rel="noreferrer" aria-label="GitHub profile for ak-sh1">ak-sh1 ↗</a></p></footer>
     </main>
   );
 }

@@ -26,9 +26,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .site-header { align-items: center; display: flex; height: 72px; justify-content: space-between; margin: 0 auto; max-width: 1280px; padding: 0 32px; }
 .brand { align-items: center; display: inline-flex; font-size: 18px; font-weight: 700; gap: 10px; letter-spacing: -.04em; }
 .brand-mark { align-items: center; background: var(--ink); border-radius: 9px; color: var(--lime); display: inline-flex; font-family: var(--font-geist-mono), monospace; font-size: 14px; height: 31px; justify-content: center; transform: rotate(-3deg); width: 31px; }
-.site-header nav { align-items: center; display: flex; font-size: 13px; gap: 30px; }
-.site-header nav a { color: #53615a; transition: color .2s ease; }
-.site-header nav a:hover { color: var(--ink); }
 
 .hero { background: var(--green-dark); color: #f7faf5; min-height: 430px; overflow: visible; position: relative; }
 .hero::before { background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 44px 44px; content: ""; inset: 0; mask-image: linear-gradient(to right, #000, transparent 72%); position: absolute; }
@@ -180,7 +177,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 footer { align-items: center; background: #102219; color: #d8e0db; display: flex; justify-content: space-between; min-height: 108px; padding: 0 max(32px, calc((100vw - 1216px) / 2)); }
 .footer-brand .brand-mark { background: var(--lime); color: var(--ink); }
 footer p { color: #849189; font-size: 10px; }
-footer > a:last-child { color: #aab6af; font-size: 10px; }
+.builder-credit a { color: #d8e0db; transition: color .2s ease; }
+.builder-credit a:hover { color: var(--lime); }
 
 @media (max-width: 980px) {
   .hero-grid { gap: 35px; grid-template-columns: 1fr; padding-bottom: 56px; }
@@ -199,7 +197,6 @@ footer > a:last-child { color: #aab6af; font-size: 10px; }
 
 @media (max-width: 720px) {
   .site-header { height: 64px; padding: 0 18px; }
-  .site-header nav a:not(:first-child) { display: none; }
   .hero-grid { padding: 50px 18px; }
   .hero h1 { font-size: 50px; }
   .hero-search-card { padding: 16px; }
