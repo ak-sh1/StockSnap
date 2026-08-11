@@ -17,6 +17,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: node --test tests/rendered-html.test.mjs
+      - run: npm run lint
 
   backend:
     runs-on: ubuntu-latest
