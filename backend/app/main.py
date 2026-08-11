@@ -59,6 +59,98 @@ def optional_number(value: Any) -> float | None:
         return None
 
 
+def build_twelve_market_snapshot(symbol: str, payload: dict[str, Any]) -> dict[str, object]:
+    observations = []
+    for item in payload.get("values", []):
+        close = optional_number(item.get("close"))
+        if close is None:
+            continue
+        observations.append(
+            {
+                "date": str(item.get("datetime", ""))[:10],
+                "close": close,
+                "high": optional_number(item.get("high")),
+                "low": optional_number(item.get("low")),
+                "volume": optional_number(item.get("volume")),
+            }
+        )
+    observations.sort(key=lambda item: item["date"])
+    if len(observations) < 2:
+        raise ValueError("The market data provider returned no daily prices.")
+
+    latest, previous = observations[-1], observations[-2]
+    latest_close = float(latest["close"])
+    previous_close = float(previous["close"])
+    change = latest_close - previous_close
+    recent_volumes = [float(item["volume"]) for item in observations[-20:] if item["volume"] is not None]
+    year_observations = observations[-252:]
+    highs = [float(item["high"]) for item in year_observations if item["high"] is not None]
+    lows = [float(item["low"]) for item in year_observations if item["low"] is not None]
+
+    return {
+        "ticker": symbol,
+        "price": latest_close,
+        "previousClose": previous_close,
+        "change": change,
+        "changePercent": change / previous_close * 100,
+        "asOf": latest["date"],
+        "currency": payload.get("meta", {}).get("currency", "USD"),
+        "volume": latest["volume"],
+        "averageVolume": sum(recent_volumes) / len(recent_volumes) if recent_volumes else None,
+        "marketCap": None,
+        "peRatio": None,
+        "eps": None,
+        "dividendYield": None,
+        "beta": None,
+        "high52Week": max(highs) if highs else None,
+        "low52Week": min(lows) if lows else None,
+        "history": [{"date": item["date"], "close": item["close"]} for item in observations],
+        "mode": "live",
+        "source": "Twelve Data daily market data",
+    }
+
+
+async def alpha_market_snapshot(symbol: str, api_key: str) -> dict[str, object]:
+    daily, overview = await asyncio.gather(
+        client.alpha_json("TIME_SERIES_DAILY", symbol, api_key),
+        client.alpha_json("OVERVIEW", symbol, api_key),
+    )
+    series = daily.get("Time Series (Daily)", {})
+    history = sorted(
+        (
+            {"date": observation_date, "close": float(values["4. close"])}
+            for observation_date, values in series.items()
+        ),
+        key=lambda item: item["date"],
+    )
+    if len(history) < 2:
+        raise ValueError("The market data provider returned no daily prices.")
+    latest, previous = history[-1], history[-2]
+    change = latest["close"] - previous["close"]
+    latest_volume = series[latest["date"]].get("5. volume")
+    return {
+        "ticker": symbol,
+        "price": latest["close"],
+        "previousClose": previous["close"],
+        "change": change,
+        "changePercent": change / previous["close"] * 100,
+        "asOf": latest["date"],
+        "currency": overview.get("Currency", "USD"),
+        "volume": optional_number(latest_volume),
+        "averageVolume": None,
+        "marketCap": optional_number(overview.get("MarketCapitalization")),
+        "peRatio": optional_number(overview.get("PERatio")),
+        "eps": optional_number(overview.get("EPS")),
+        "dividendYield": optional_number(overview.get("DividendYield")),
+        "beta": optional_number(overview.get("Beta")),
+        "high52Week": optional_number(overview.get("52WeekHigh")),
+        "low52Week": optional_number(overview.get("52WeekLow")),
+        "history": history,
+        "mode": "live",
+        "source": "Alpha Vantage daily market data",
+    }
+
+
 @app.get("/api/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "time": datetime.now(timezone.utc).isoformat()}
@@ -106,53 +198,30 @@ async def company_snapshot(
 
 @app.get("/api/stock")
 async def stock_snapshot(ticker: str = Query(pattern=r"^[A-Za-z][A-Za-z0-9.\-]{0,9}$")) -> dict[str, object]:
-    api_key = getenv("ALPHA_VANTAGE_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=503, detail="Set ALPHA_VANTAGE_API_KEY to enable market prices.")
-
     symbol = ticker.upper()
-    try:
-        daily, overview = await asyncio.gather(
-            client.alpha_json("TIME_SERIES_DAILY", symbol, api_key),
-            client.alpha_json("OVERVIEW", symbol, api_key),
+    twelve_data_key = getenv("TWELVE_DATA_API_KEY")
+    alpha_vantage_key = getenv("ALPHA_VANTAGE_API_KEY")
+    if not twelve_data_key and not alpha_vantage_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Set TWELVE_DATA_API_KEY or ALPHA_VANTAGE_API_KEY to enable market prices.",
         )
-    except httpx.HTTPError as error:
-        raise HTTPException(status_code=502, detail="The market data provider is temporarily unavailable.") from error
 
-    series = daily.get("Time Series (Daily)", {})
-    history = sorted(
-        (
-            {"date": observation_date, "close": float(values["4. close"])}
-            for observation_date, values in series.items()
-        ),
-        key=lambda item: item["date"],
-    )
-    if len(history) < 2:
-        raise HTTPException(status_code=502, detail="The market data provider returned no daily prices.")
-    latest, previous = history[-1], history[-2]
-    change = latest["close"] - previous["close"]
-    latest_volume = series[latest["date"]].get("5. volume")
-    return {
-        "ticker": symbol,
-        "price": latest["close"],
-        "previousClose": previous["close"],
-        "change": change,
-        "changePercent": change / previous["close"] * 100,
-        "asOf": latest["date"],
-        "currency": overview.get("Currency", "USD"),
-        "volume": optional_number(latest_volume),
-        "averageVolume": None,
-        "marketCap": optional_number(overview.get("MarketCapitalization")),
-        "peRatio": optional_number(overview.get("PERatio")),
-        "eps": optional_number(overview.get("EPS")),
-        "dividendYield": optional_number(overview.get("DividendYield")),
-        "beta": optional_number(overview.get("Beta")),
-        "high52Week": optional_number(overview.get("52WeekHigh")),
-        "low52Week": optional_number(overview.get("52WeekLow")),
-        "history": history,
-        "mode": "live",
-        "source": "Alpha Vantage daily market data",
-    }
+    provider_error: Exception | None = None
+    if twelve_data_key:
+        try:
+            payload = await client.twelve_json(symbol, twelve_data_key)
+            return build_twelve_market_snapshot(symbol, payload)
+        except (httpx.HTTPError, ValueError) as error:
+            provider_error = error
+
+    if alpha_vantage_key:
+        try:
+            return await alpha_market_snapshot(symbol, alpha_vantage_key)
+        except (httpx.HTTPError, ValueError) as error:
+            provider_error = error
+
+    raise HTTPException(status_code=502, detail="The market data provider is temporarily unavailable.") from provider_error
 
 
 @app.get("/api/macro")

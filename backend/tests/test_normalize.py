@@ -1,4 +1,5 @@
 from backend.app.companies import find_company
+from backend.app.main import build_twelve_market_snapshot
 from backend.app.normalize import build_snapshot
 
 
@@ -55,3 +56,23 @@ def test_snapshot_is_point_in_time_aware() -> None:
 
 def test_unknown_ticker_returns_none() -> None:
     assert find_company("NOTREAL") is None
+
+
+def test_twelve_data_snapshot_calculates_market_metrics() -> None:
+    payload = {
+        "meta": {"currency": "USD"},
+        "values": [
+            {"datetime": "2026-08-07", "high": "102", "low": "98", "close": "100", "volume": "1000"},
+            {"datetime": "2026-08-10", "high": "107", "low": "99", "close": "105", "volume": "2000"},
+        ],
+    }
+
+    snapshot = build_twelve_market_snapshot("TEST", payload)
+
+    assert snapshot["price"] == 105
+    assert snapshot["change"] == 5
+    assert snapshot["changePercent"] == 5
+    assert snapshot["averageVolume"] == 1500
+    assert snapshot["high52Week"] == 107
+    assert snapshot["low52Week"] == 98
+    assert snapshot["source"] == "Twelve Data daily market data"

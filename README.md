@@ -10,7 +10,7 @@ StockSnap is a stock-research web app that combines price performance, company c
 
 ## Why this project stands out
 
-Stock apps often depend on one opaque data feed. StockSnap separates the pipeline into two traceable layers: daily market data from Alpha Vantage and reported business fundamentals from SEC EDGAR. It also handles provider limits, caching, missing financial concepts, point-in-time filtering, and a clearly labeled no-key demo mode.
+Stock apps often depend on one opaque data feed. StockSnap separates the pipeline into two traceable layers: daily market data from Twelve Data (with Alpha Vantage fallback) and reported business fundamentals from SEC EDGAR. It also handles provider failover, caching, missing financial concepts, point-in-time filtering, and a clearly labeled no-key demo mode.
 
 ## Important features
 
@@ -26,7 +26,8 @@ Stock apps often depend on one opaque data feed. StockSnap separates the pipelin
 ## Architecture
 
 ```text
-Alpha Vantage ─────┐
+Twelve Data ───────┐
+Alpha Vantage ─────┤
 SEC EDGAR ─────────┼── Next.js API routes ── StockSnap dashboard
 FRED ──────────────┘            │                        │
                                 │                        └── local browser watchlist
@@ -41,7 +42,7 @@ The public Vercel deployment uses the built-in Next.js API routes, so the websit
 - TypeScript, React 19, Next.js 16
 - HTML Canvas charting with no chart-library dependency
 - SEC EDGAR Company Facts and ticker-directory APIs
-- Alpha Vantage daily market data
+- Twelve Data daily market data with Alpha Vantage fallback
 - Federal Reserve Economic Data (FRED)
 - Docker, Docker Compose, and GitHub Actions
 
@@ -83,11 +84,12 @@ If `NEXT_PUBLIC_API_BASE_URL` is omitted, the frontend uses its built-in Next.js
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `SEC_USER_AGENT` | Yes for production | Identifies your SEC API client with a name and email |
-| `ALPHA_VANTAGE_API_KEY` | For live prices | Enables daily price history and market statistics |
+| `TWELVE_DATA_API_KEY` | Preferred for prices | Enables one-year daily price history for broad US-stock coverage |
+| `ALPHA_VANTAGE_API_KEY` | Optional fallback | Enables daily prices and additional market statistics |
 | `ALLOWED_ORIGINS` | Backend deployments | Comma-separated frontend origins allowed by CORS |
 | `NEXT_PUBLIC_API_BASE_URL` | Optional | Points the frontend at the Python API |
 
-Alpha Vantage’s free plan is rate-limited. StockSnap caches successful upstream responses for six hours to use that allowance responsibly.
+StockSnap requests Twelve Data first because one call supplies the price, chart history, volume, and 52-week range. It falls back to Alpha Vantage when that provider is configured. Successful responses are cached for six hours to use provider allowances responsibly.
 
 ## API
 
@@ -119,7 +121,7 @@ GitHub Actions runs the Python and frontend suites on every push and pull reques
 
 Import this GitHub repository into Vercel or use the **Deploy with Vercel** button above. Vercel detects Next.js, builds the app, and deploys the frontend together with its built-in API routes. Connect the repository once and every push to `main` can produce a new production deployment; pull requests receive preview deployments.
 
-For live prices, add `ALPHA_VANTAGE_API_KEY` as a Vercel environment variable. Never expose the key through a `NEXT_PUBLIC_` variable. The app works without it using clearly labeled demonstration market data.
+For broad price coverage, add `TWELVE_DATA_API_KEY` as a Vercel environment variable for Production and Preview. You can also add `ALPHA_VANTAGE_API_KEY` as a fallback. Never expose either key through a `NEXT_PUBLIC_` variable. The app works without them using clearly labeled demonstration market data.
 
 ### Docker (optional)
 
@@ -133,7 +135,7 @@ Docker keeps the operating system, language runtimes, and dependencies consisten
 
 ## Data policy
 
-StockSnap uses public SEC and Federal Reserve data. Live market data is requested through the documented Alpha Vantage API. The bundled market snapshot is explicitly marked as demonstration data and should not be treated as current pricing.
+StockSnap uses public SEC and Federal Reserve data. Market prices are requested through documented Twelve Data and Alpha Vantage APIs. The bundled market snapshot is explicitly marked as demonstration data and should not be treated as current pricing. Before displaying provider data publicly, use a plan whose license covers your intended display or distribution.
 
 This project is educational and does not provide investment advice.
 
