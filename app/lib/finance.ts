@@ -31,7 +31,7 @@ type Submissions = {
   };
 };
 
-export type AnnualPoint = {
+type AnnualPoint = {
   year: string;
   periodEnd: string;
   revenue: number | null;
@@ -41,7 +41,7 @@ export type AnnualPoint = {
   freeCashFlow: number | null;
 };
 
-export type Filing = {
+type Filing = {
   accessionNumber: string;
   form: string;
   filedAt: string;

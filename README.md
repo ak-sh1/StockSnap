@@ -18,7 +18,7 @@ Stock apps often depend on one opaque data feed. StockSnap separates the pipelin
 - Explore interactive 1-month, 3-month, and 1-year price performance
 - Compare two stocks on a normalized-return chart
 - Save a private watchlist in the browser without creating an account
-- Review market cap, P/E, EPS, beta, volume, and 52-week range
+- Review price change, volume, average volume, and 52-week range
 - Connect price movement to five years of revenue, net income, and cash flow
 - Query point-in-time SEC fundamentals through the Python API
 - Fall back gracefully when an upstream market provider is unavailable
@@ -34,7 +34,7 @@ FRED ──────────────┘            │               
                                 └── optional FastAPI service when using Docker
 ```
 
-The public Vercel deployment uses the built-in Next.js API routes, so the website is one deployable application. The Python FastAPI service remains as a portfolio-quality data-pipeline implementation and is used by the Docker Compose setup. Both paths show a transparent demo dataset when no market-data key is configured.
+The public Vercel deployment uses the built-in Next.js API routes, so the website is one deployable application. The Python FastAPI service remains as a portfolio-quality data-pipeline implementation and is used by the Docker Compose setup. The Next.js path shows a transparent demo dataset when no market-data key is configured; the standalone FastAPI endpoint returns a clear configuration error until a provider key is supplied.
 
 ## Stack
 
@@ -77,7 +77,7 @@ npm install
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
-If `NEXT_PUBLIC_API_BASE_URL` is omitted, the frontend uses its built-in Next.js API and demo market snapshot.
+If `NEXT_PUBLIC_API_BASE_URL` is omitted, the frontend uses its built-in Next.js API. That API uses live provider data when configured and otherwise falls back to the labeled demo snapshot.
 
 ## Environment variables
 
@@ -93,15 +93,17 @@ StockSnap requests Twelve Data first because one call supplies the price, chart 
 
 ## API
 
+The Next.js deployment exposes:
+
 ```http
-GET /api/health
-GET /api/companies
 GET /api/search?q=apple
 GET /api/stock?ticker=AAPL
 GET /api/company?ticker=AAPL
 GET /api/company?ticker=AAPL&as_of=2024-06-30
 GET /api/macro
 ```
+
+The optional FastAPI service also exposes `GET /api/health`, `GET /api/companies`, and interactive OpenAPI documentation at `/docs`.
 
 The `as_of` parameter excludes SEC facts published after the selected date. This prevents historical analysis from accidentally seeing future information.
 
